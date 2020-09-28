@@ -1,0 +1,131 @@
+---
+title: "NBLDA, PLDA and PLDA2 example for RNA-Seq"
+subtitle: "Two classes"
+author: "Francis Akio Ishizaka"
+date: "16/09/2020"
+output: 
+  pdf_document:
+    keep_md: yes
+---
+
+This implementation classifies non-tumor and tumor.
+
+## Setup
+```{r,message=FALSE}
+library(MLSeq)
+library(tidyverse)
+library(S4Vectors)
+library(DESeq2)
+
+db <- read_tsv("GSE146889.tsv")
+```
+
+### Remove obvious non-expressive genes
+
+```{r}
+db <- db[rowSums(db[,-1]) > 1,]
+```
+
+
+## Define classes non-tumor (N) vs. tumor (T)
+```{r}
+classe <- colnames(db) %>% str_detect("normal") %>% ifelse("N", "T") %>% factor()
+classe <- classe[-1]
+classe <- DataFrame(cnc = classe)
+```
+
+## For debuging, select 100 genes
+```{r}
+debug <- F
+if(debug){
+  vars <- apply(db[,-1], 1, var, na.rm = T)
+  names(vars) <- db$GeneId
+  vars <- vars %>% sort(decreasing = T)
+  data <- db[db$GeneId %in% names(vars)[1:100], ]
+} else data<- db
+```
+
+## Partition data for cross-validation
+For reproducibility reasons, it was select 171752 as seed.
+
+ 70% for training and 30% for test.
+
+```{r}
+genes <- data[,1]
+data <- data[,-1]
+set.seed(171752)
+ind <- sample(ncol(data), ceiling(ncol(data)* 0.7), F)
+dTr <- as.matrix(data[, ind] + 1)
+dTs <- as.matrix(data[,-ind] + 1)
+cTr <- DataFrame(cnc = classe[ ind,])
+cTs <- DataFrame(cnc = classe[-ind,])
+data.train <- DESeqDataSetFromMatrix(countData = dTr, colData = cTr,
+                                     design = formula(~cnc))
+data.test <- DESeqDataSetFromMatrix(countData = dTs, colData = cTs,
+                                     design = formula(~cnc))
+```
+
+## PLDA Classification
+```{r}
+mod <- classify(data = data.train, method = "PLDA",
+                normalize = "deseq", ref = "N",
+                control = discreteControl(method = "repeatedcv", number = 5,
+                                          repeats = 10))
+trained(mod)
+```
+
+### Prediction
+```{r}
+pred.mod <- predict(mod, data.test)
+
+pred.mod <- relevel(pred.mod, ref = "N")
+verd     <- relevel(cTs$cnc, ref = "N")
+
+tbl <- table(Predito = pred.mod, Verd = verd)
+confusionMatrix(tbl, positive = "N")
+resultadoPLDA <- confusionMatrix(tbl, positive = "N")
+resultadoPLDA$overall['Accuracy']
+```
+
+## PLDA2 Classification
+```{r}
+mod1 <- classify(data = data.train, method = "PLDA2",
+                normalize = "deseq", ref = "N",
+                control = discreteControl(method = "repeatedcv", number = 5,
+                                          repeats = 10))
+trained(mod1)
+```
+
+### Prediction
+```{r}
+pred.mod1 <- predict(mod1, data.test)
+
+pred.mod1 <- relevel(pred.mod1, ref = "N")
+verd     <- relevel(cTs$cnc, ref = "N")
+
+tbl <- table(Predito = pred.mod1, Verd = verd)
+confusionMatrix(tbl, positive = "N")
+resultadoPLDA2 <- confusionMatrix(tbl, positive = "N")
+resultadoPLDA2$overall['Accuracy']
+```
+
+## NBLDA Classification
+```{r}
+mod2 <- classify(data = data.train, method = "NBLDA",
+                normalize = "deseq", ref = "N", 
+                control = discreteControl(method = "repeatedcv", number = 5,
+                                          repeats = 10, classProbs = T))
+```
+
+### Prediction
+```{r}
+pred.mod2 <- predict(mod2, data.test)
+
+pred.mod2 <- relevel(pred.mod2, ref = "N")
+verd     <- relevel(cTs$cnc, ref = "N")
+
+tbl <- table(Predito = pred.mod2, Verd = verd)
+confusionMatrix(tbl, positive = "N")
+resultadoNBLDA <- confusionMatrix(tbl, positive = "N")
+resultadoNBLDA$overall['Accuracy']
+```
