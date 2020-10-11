@@ -335,3 +335,68 @@ resultadoPLDA2$overall['Accuracy']
 ##  Accuracy 
 ## 0.6730769
 ```
+
+## NBLDA Classification
+
+```r
+mod2 <- classify(data = data.train, method = "NBLDA",
+                normalize = "deseq", ref = "N", 
+                control = discreteControl(method = "repeatedcv", number = 5,
+                                          repeats = 10, classProbs = T))
+```
+
+### Prediction
+
+```r
+pred.mod2 <- predict(mod2, data.test)
+
+pred.mod2 <- relevel(pred.mod2, ref = "N")
+verd     <- relevel(cTs$cnc, ref = "N")
+
+tbl <- table(Predito = pred.mod2, Verd = verd)
+confusionMatrix(tbl, positive = "N")
+```
+
+```
+## Confusion Matrix and Statistics
+## 
+##         Verd
+## Predito   N MSI_H MSI_LS MSS
+##   N      23     1      0   0
+##   MSI_H   2     0      2   0
+##   MSI_LS  3     4     11   2
+##   MSS     0     1      1   2
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.6923         
+##                  95% CI : (0.549, 0.8128)
+##     No Information Rate : 0.5385         
+##     P-Value [Acc > NIR] : 0.0174         
+##                                          
+##                   Kappa : 0.514          
+##                                          
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: N Class: MSI_H Class: MSI_LS Class: MSS
+## Sensitivity            0.8214      0.00000        0.7857    0.50000
+## Specificity            0.9583      0.91304        0.7632    0.95833
+## Pos Pred Value         0.9583      0.00000        0.5500    0.50000
+## Neg Pred Value         0.8214      0.87500        0.9062    0.95833
+## Prevalence             0.5385      0.11538        0.2692    0.07692
+## Detection Rate         0.4423      0.00000        0.2115    0.03846
+## Detection Prevalence   0.4615      0.07692        0.3846    0.07692
+## Balanced Accuracy      0.8899      0.45652        0.7744    0.72917
+```
+
+```r
+resultadoNBLDA <- confusionMatrix(tbl, positive = "N")
+resultadoNBLDA$overall['Accuracy']
+```
+
+```
+##  Accuracy 
+## 0.6923077
+```

@@ -113,3 +113,24 @@ confusionMatrix(tbl, positive = "N")
 resultadoPLDA2 <- confusionMatrix(tbl, positive = "N")
 resultadoPLDA2$overall['Accuracy']
 ```
+
+## NBLDA Classification
+```{r}
+mod2 <- classify(data = data.train, method = "NBLDA",
+                normalize = "deseq", ref = "N", 
+                control = discreteControl(method = "repeatedcv", number = 5,
+                                          repeats = 10, classProbs = T))
+```
+
+### Prediction
+```{r}
+pred.mod2 <- predict(mod2, data.test)
+
+pred.mod2 <- relevel(pred.mod2, ref = "N")
+verd     <- relevel(cTs$cnc, ref = "N")
+
+tbl <- table(Predito = pred.mod2, Verd = verd)
+confusionMatrix(tbl, positive = "N")
+resultadoNBLDA <- confusionMatrix(tbl, positive = "N")
+resultadoNBLDA$overall['Accuracy']
+```
